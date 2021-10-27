@@ -1,2 +1,2 @@
 #!/bin/bash
-cabal run compiler -- file.txt llvm
+cabal run compiler -- examples/test02.ins llvm

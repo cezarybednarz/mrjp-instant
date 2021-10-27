@@ -1,13 +1,29 @@
 module Compiler (compile) where
 
+import AbsInstant
+import ParInstant 
+import CompileJVM
+import CompileLLVM
+
 import System.Environment ( getArgs )
 import Data.Map.Lazy as LazyMap ()
 import System.Exit ( exitFailure, exitSuccess )
-import ParInstant 
+import System.IO (hPutStrLn, stderr)
+
 
 usage :: IO ()
 usage = 
-    putStrLn "usage: ./main <input file> <compilation type: llvm or jvm>"
+    hPutStrLn stderr "ERROR: exit code: "
+
+
+chooseCompilerType :: Program -> String -> IO (Either String String)
+chooseCompilerType program compilationType = do
+    case compilationType of 
+        "jvm" -> CompileJVM.compileProgram program
+        "llvm" -> CompileLLVM.compileProgram program
+        _ -> do
+            usage
+            return $ Left "wrong file name"
 
 
 compile :: IO ()
@@ -18,6 +34,14 @@ compile = do
         [_] -> usage
         (inputFile:compilationType:_) -> do
             code <- readFile inputFile
-            print code
+            case pProgram $ myLexer code of
+                Left errMessage -> do
+                    hPutStrLn stderr errMessage
+                    exitFailure
+                Right parseTree -> do
+                    output <- chooseCompilerType parseTree compilationType
+                    case output of 
+                        Left message -> hPutStrLn stderr message
+                        Right message -> hPutStrLn stderr message
 
             

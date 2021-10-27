@@ -23,6 +23,8 @@ source-repository head
 library
   exposed-modules:
       AbsInstant
+      CompileJVM
+      CompileLLVM
       Compiler
       ErrM
       LexInstant
@@ -45,6 +47,8 @@ executable compiler
   main-is: Main.hs
   other-modules:
       AbsInstant
+      CompileJVM
+      CompileLLVM
       Compiler
       ErrM
       LexInstant
