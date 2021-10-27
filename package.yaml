@@ -1,0 +1,40 @@
+name:                mrjp-instant
+version:             0.1.0.0
+github:              "cezarybednarz/mrjp-instant"
+license:             BSD3
+author:              "Cezary Bednarz"
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Instant language compiler
+
+dependencies:
+- base >= 4.7 && < 5
+- array >= 0
+- containers >= 0
+- mtl >= 0
+
+library:
+  source-dirs: src
+
+executables:
+  compiler:
+    main:                Main.hs
+    source-dirs:         src
+    dependencies:
+    - mrjp-instant
+
+# tests:
+#   compiler-test:
+#     main:                Spec.hs
+#     source-dirs:         test
+#     dependencies:
+#     - wiadrex-lang

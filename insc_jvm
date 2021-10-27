@@ -1,1 +1,2 @@
 #!/bin/bash
+cabal run compiler -- file.txt jvm
