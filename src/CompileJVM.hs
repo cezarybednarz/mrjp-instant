@@ -8,6 +8,6 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Maybe
 
-compileProgram :: Program -> IO (Either String String)
+compileProgram :: Program -> String
 compileProgram program = 
-    return $ Right "ok jvm"
+  "ok jvm"

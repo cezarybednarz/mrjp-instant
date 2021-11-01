@@ -7,4 +7,4 @@ import System.Exit ( exitFailure, exitSuccess )
 
 main :: IO ()
 main = do
-    compile
+  compile
