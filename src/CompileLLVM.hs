@@ -25,19 +25,10 @@ newtype CurrReg = CurrReg Integer deriving Show
 -- current variable values, allocated and stored in registers
 newtype Vars = Vars (Map.Map String Reg) deriving Show
 
-cRegToReg :: CurrReg -> Reg
-cRegToReg (CurrReg currReg) = Reg currReg
-
-incCurrReg :: CurrReg -> Integer -> CurrReg
-incCurrReg (CurrReg currReg) val = CurrReg (currReg + val)
-
 setVar :: String -> Reg -> [LLStmt] -> CurrReg -> Vars -> ([LLStmt], CurrReg, Vars)
 setVar ident (Reg reg) llstmts (CurrReg currReg) (Vars vars) = do
-  if Map.member ident vars then do
-    let newVars = Vars (Map.insert ident (Reg (currReg + 1)) vars)
-    (llstmts ++ [Alloca] ++ [Store $ VReg reg], CurrReg (currReg + 2), newVars)
-  else
-    (llstmts ++ [Store $ VReg reg], CurrReg (currReg + 1), Vars vars)
+  let newVars = Vars (Map.insert ident (Reg (currReg + 1)) vars)
+  (llstmts ++ [Store $ VReg reg], CurrReg (currReg + 1), newVars)
 
 getVarReg :: String -> Vars -> Reg
 getVarReg ident (Vars vars) =
@@ -50,7 +41,7 @@ arithmExprTollstmts :: Op -> Exp -> Exp -> CurrReg -> Vars -> ([LLStmt], CurrReg
 arithmExprTollstmts op exp1 exp2 currReg vars = do
   let (llstmts1, CurrReg currReg1, reg1) = exprTollstmts exp1 currReg vars
   let (llstmts2, CurrReg currReg2, reg2) = exprTollstmts exp2 (CurrReg currReg1) vars
-  (llstmts2 ++ [Arithm op reg1 reg2], CurrReg $ currReg2 + 1, Reg $ currReg2 + 1)
+  (llstmts1 ++ llstmts2 ++ [Arithm op reg1 reg2], CurrReg $ currReg2 + 1, Reg $ currReg2 + 1)
 
 exprTollstmts :: Exp -> CurrReg -> Vars -> ([LLStmt], CurrReg, Reg)
 exprTollstmts (ExpLit val) (CurrReg currReg) vars = ([Store $ VConst val], CurrReg $ currReg + 1, Reg $ currReg + 1)
@@ -66,12 +57,13 @@ stmtTollstmts (SAss (Ident ident) expr) currReg vars = do
   let (llstmts2, currReg2, vars2) = setVar ident reg1 llstmts1 currReg1 vars
   (llstmts2, currReg2, vars2)
 stmtTollstmts (SExp expr) currReg vars = do
-  let (llstmts1, currReg1, reg1) = exprTollstmts expr currReg vars
-  (llstmts1 ++ [Print reg1], currReg1, vars)
+  let (llstmts1, (CurrReg currReg1), reg1) = exprTollstmts expr currReg vars
+  (llstmts1 ++ [Print reg1], (CurrReg $ currReg1 + 1), vars)
 
 programToLLStmts :: Program -> [LLStmt] -> CurrReg -> Vars -> [LLStmt]
-programToLLStmts (Prog []) llstmts _ _ = 
-  llstmts
+programToLLStmts (Prog [stmt]) llstmts currReg vars = do
+  let (newllstmts, _, _) = stmtTollstmts stmt currReg vars
+  (llstmts ++ newllstmts) 
 programToLLStmts (Prog (stmt:stmts)) llstmts currReg vars = do
   let (newllstmts, newCurrReg, newVars) = stmtTollstmts stmt currReg vars
   programToLLStmts (Prog stmts) (llstmts ++ newllstmts) newCurrReg newVars

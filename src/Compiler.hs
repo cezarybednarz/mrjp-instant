@@ -12,27 +12,25 @@ import System.Exit ( exitFailure, exitSuccess )
 import System.IO (hPutStrLn, stderr)
 
 
-usage :: IO ()
-usage = 
-  hPutStrLn stderr "ERROR: exit code: "
+usage :: String
+usage = "cabal run compiler -- examples/test02.ins llvm"
+  
 
 
-chooseCompilerType :: Program -> String -> IO (Either String String)
+chooseCompilerType :: Program -> String -> String
 chooseCompilerType program compilationType = do
   case compilationType of 
     "jvm" -> CompileJVM.compileProgram program
     "llvm" -> CompileLLVM.compileProgram program
-    _ -> do
-      usage
-      return $ Left "wrong file name"
+    _ -> usage
 
 
 compile :: IO ()
 compile = do
   args <- getArgs
   case args of 
-    [] -> usage
-    [_] -> usage
+    [] -> print usage
+    [_] -> print usage
     (inputFile:compilationType:_) -> do
       code <- readFile inputFile
       case pProgram $ myLexer code of
@@ -40,9 +38,8 @@ compile = do
           hPutStrLn stderr errMessage
           exitFailure
         Right parseTree -> do
-          output <- chooseCompilerType parseTree compilationType
-          case output of 
-            Left message -> hPutStrLn stderr message -- todo
-            Right message -> hPutStrLn stderr message -- todo
+          print parseTree
+          print "\n"
+          print $ chooseCompilerType parseTree compilationType
 
             

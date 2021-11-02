@@ -1,2 +1,2 @@
 #!/bin/bash
-cabal run compiler -- examples/test02.ins llvm
+cabal run compiler -- playground/my_tests/test1.ins llvm
