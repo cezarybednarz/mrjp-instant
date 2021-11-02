@@ -1,2 +1,3 @@
 #!/bin/bash
-cabal run compiler -- examples/test02.ins jvm
+cabal run compiler -v 0 -- examples/test02.ins jvm
+

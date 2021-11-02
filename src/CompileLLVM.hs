@@ -9,9 +9,9 @@ import Data.Maybe
 import Data.Map as Map
 
 -- values
-data Val = VVal Integer | VReg Integer deriving Show
+data Val = VVal Integer | VReg Integer
 -- arithmetic operators
-data Op = Add | Sub | Mul | Div deriving Show
+data Op = Add | Sub | Mul | Div
 -- abstract type describing llvm statement
 data LLStmt = Arithm Op Val Val
             | Print Reg
@@ -20,11 +20,30 @@ data LLStmt = Arithm Op Val Val
             | Store Val Reg
             deriving Show
 -- register value
-newtype Reg = Reg Integer deriving Show
+newtype Reg = Reg Integer
 -- number of currently used registers
 newtype CurrReg = CurrReg Integer deriving Show
 -- current variable values, allocated and stored in registers
 newtype Vars = Vars (Map.Map String Reg) deriving Show
+
+showReg :: Integer -> String 
+showReg reg = "%i" ++ show reg
+
+instance Show Op where
+  show op = case op of 
+    Add -> "add"
+    Sub -> "sub" 
+    Mul -> "mul"
+    Div -> "sdiv"
+
+instance Show Reg where
+  show (Reg reg) = showReg reg
+
+instance Show Val where
+  show val = case val of 
+    VVal int -> show int
+    VReg reg -> showReg reg
+
 
 setVar :: String -> Val -> [LLStmt] -> CurrReg -> Vars -> ([LLStmt], CurrReg, Vars)
 setVar ident val llstmts (CurrReg currReg) (Vars vars) = do
@@ -33,7 +52,7 @@ setVar ident val llstmts (CurrReg currReg) (Vars vars) = do
     (llstmts ++ [Alloca] ++ [Store val (Reg (currReg + 1))], CurrReg (currReg + 2), newVars)
   else do
     let reg = getVarReg ident (Vars vars)
-    (llstmts ++ [Store val reg], CurrReg (currReg + 1), (Vars vars))
+    (llstmts ++ [Store val reg], CurrReg (currReg + 1), Vars vars)
 
 getVarReg :: String -> Vars -> Reg
 getVarReg ident (Vars vars) =
@@ -70,20 +89,42 @@ programToLLStmts (Prog (stmt:stmts)) llstmts currReg vars = do
   let (newllstmts, newCurrReg, newVars) = stmtTollstmts stmt currReg vars
   programToLLStmts (Prog stmts) (llstmts ++ newllstmts) newCurrReg newVars
 
--- writing all llstmts to LLVM language in main function --
--- outputBody :: [LLStmt] -> Integer -> [String] -> [String]
--- outputBody [] _ lines = lines
--- outputBody (llstmt:llstmts) lineNr lines =
+-- writing all llstmts to LLVM language in main function -- 
 
+outputBody :: [LLStmt] -> Integer -> [String] -> [String]
+outputBody [] _ lines = lines
+outputBody (llstmt:llstmts) lineNr lines = do
+  let newLine = " " ++ case llstmt of 
+          (Arithm op val1 val2) -> 
+            showReg lineNr ++ " = " ++ show op ++ " i32 " ++ show val1 ++ ", " ++ show val2 
+          (Print reg) -> 
+            "call void @printInt(i32 " ++ show reg ++ ")" 
+          Alloca -> 
+            showReg lineNr ++ " = alloca i32"
+          (Load reg) -> 
+            showReg lineNr ++ " = load i32, i32* " ++ show reg 
+          (Store val reg) -> "store i32 " ++ show val ++ ", i32* " ++ show reg
+  outputBody llstmts (lineNr + 1) (lines ++ [newLine]) 
 
-llStmtsToOutput :: [LLStmt] -> String -- todo zmienic na stringify
-llStmtsToOutput llstmts = show llstmts
+llStmtsToOutput :: [LLStmt] -> [String]
+llStmtsToOutput llstmts =  
+  [
+    "declare void @printInt(i32)",
+    "define i32 @main() {"
+  ] 
+  ++
+  outputBody llstmts 1 []
+  ++
+  [
+    " ret i32 0",
+    "}"
+  ]
 
 
 -- main compile function --
 compileProgram :: Program -> String
 compileProgram program = do
   let llstmts = programToLLStmts program [] (CurrReg 0) (Vars Map.empty)
-  llStmtsToOutput llstmts
+  unlines $ llStmtsToOutput llstmts
 
 

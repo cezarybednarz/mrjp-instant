@@ -1,2 +1,9 @@
 #!/bin/bash
-cabal run compiler -- playground/my_tests/test1.ins llvm
+#cabal install --overwrite-policy=always --installdir=dist-newstyle compiler
+
+./dist-newstyle/compiler examples/test07.ins llvm > playground/foo.ll
+
+cd playground
+llvm-as foo.ll
+llvm-link -o out.bc foo.bc runtime.bc
+lli out.bc
