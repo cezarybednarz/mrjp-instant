@@ -57,20 +57,23 @@ stmtTollstmts (SAss (Ident ident) expr) currReg vars = do
   let (llstmts2, currReg2, vars2) = setVar ident reg1 llstmts1 currReg1 vars
   (llstmts2, currReg2, vars2)
 stmtTollstmts (SExp expr) currReg vars = do
-  let (llstmts1, (CurrReg currReg1), reg1) = exprTollstmts expr currReg vars
-  (llstmts1 ++ [Print reg1], (CurrReg $ currReg1 + 1), vars)
+  let (llstmts1, CurrReg currReg1, reg1) = exprTollstmts expr currReg vars
+  (llstmts1 ++ [Print reg1], CurrReg $ currReg1 + 1, vars)
 
 programToLLStmts :: Program -> [LLStmt] -> CurrReg -> Vars -> [LLStmt]
+programToLLStmts (Prog []) _ _ _ = []
 programToLLStmts (Prog [stmt]) llstmts currReg vars = do
   let (newllstmts, _, _) = stmtTollstmts stmt currReg vars
-  (llstmts ++ newllstmts) 
+  llstmts ++ newllstmts 
 programToLLStmts (Prog (stmt:stmts)) llstmts currReg vars = do
   let (newllstmts, newCurrReg, newVars) = stmtTollstmts stmt currReg vars
   programToLLStmts (Prog stmts) (llstmts ++ newllstmts) newCurrReg newVars
 
 -- writing all llstmts to LLVM language in main function --
 llStmtsToOutput :: [LLStmt] -> String -- todo zmienic na stringify
-llStmtsToOutput = show
+llStmtsToOutput llstmts = show llstmts
+
+
 
 -- main compile function --
 compileProgram :: Program -> String
