@@ -9,7 +9,7 @@ import Data.Maybe
 import Data.Map as Map
 
 -- values
-data Val = VConst Integer | VReg Reg deriving Show
+data Val = VConst Integer | VReg Integer deriving Show
 -- arithmetic operators
 data Op = Add | Sub | Mul | Div deriving Show
 -- abstract type describing llvm statement
@@ -31,45 +31,49 @@ cRegToReg (CurrReg currReg) = Reg currReg
 incCurrReg :: CurrReg -> Integer -> CurrReg
 incCurrReg (CurrReg currReg) val = CurrReg (currReg + val)
 
-setVar :: String -> Val -> [LLStmt] -> CurrReg -> Vars -> ([LLStmt], CurrReg, Vars)
-setVar ident val llstmts (CurrReg currReg) (Vars vars) =
+setVar :: String -> Reg -> [LLStmt] -> CurrReg -> Vars -> ([LLStmt], CurrReg, Vars)
+setVar ident (Reg reg) llstmts (CurrReg currReg) (Vars vars) = do
   if Map.member ident vars then do
-    newVars <- Vars (Map.insert ident (Reg (currReg + 1)) vars)
-    (llstmts ++ [Alloca] ++ [Store val], CurrReg (currReg + 2), newVars)
+    let newVars = Vars (Map.insert ident (Reg (currReg + 1)) vars)
+    (llstmts ++ [Alloca] ++ [Store $ VReg reg], CurrReg (currReg + 2), newVars)
   else
-    (llstmts ++ [Store val], CurrReg (currReg + 1), Vars vars)
+    (llstmts ++ [Store $ VReg reg], CurrReg (currReg + 1), Vars vars)
 
 getVarReg :: String -> Vars -> Reg
-getVarReg ident vars =
-  Map.lookup ident vars
+getVarReg ident (Vars vars) =
+  case Map.lookup ident vars of
+    Nothing -> Reg $ -1
+    Just reg -> reg
+
 
 arithmExprTollstmts :: Op -> Exp -> Exp -> CurrReg -> Vars -> ([LLStmt], CurrReg, Reg)
 arithmExprTollstmts op exp1 exp2 currReg vars = do
-  (llstmts1, currReg1, _) <- exprTollstmts exp1 currReg vars
-  (llstmts2, currReg2, _) <- exprTollstmts exp2 currReg1 vars
-  (llstmts2 ++ [Arithm op currReg1 currReg2], currReg2 + 1, currReg2 + 1)
+  let (llstmts1, CurrReg currReg1, reg1) = exprTollstmts exp1 currReg vars
+  let (llstmts2, CurrReg currReg2, reg2) = exprTollstmts exp2 (CurrReg currReg1) vars
+  (llstmts2 ++ [Arithm op reg1 reg2], CurrReg $ currReg2 + 1, Reg $ currReg2 + 1)
 
 exprTollstmts :: Exp -> CurrReg -> Vars -> ([LLStmt], CurrReg, Reg)
-exprTollstmts (ExpLit val) currReg vars = ([Store val], currReg + 1, currReg + 1)
-exprTollstmts (ExpVar ident) currReg vars = ([], currReg, getVarReg ident vars)
+exprTollstmts (ExpLit val) (CurrReg currReg) vars = ([Store $ VConst val], CurrReg $ currReg + 1, Reg $ currReg + 1)
+exprTollstmts (ExpVar (Ident ident)) currReg vars = ([], currReg, getVarReg ident vars)
 exprTollstmts (ExpAdd x y) currReg vars = arithmExprTollstmts Add x y currReg vars
 exprTollstmts (ExpSub x y) currReg vars = arithmExprTollstmts Sub x y currReg vars
 exprTollstmts (ExpMul x y) currReg vars = arithmExprTollstmts Mul x y currReg vars
 exprTollstmts (ExpDiv x y) currReg vars = arithmExprTollstmts Div x y currReg vars
 
 stmtTollstmts :: Stmt -> CurrReg -> Vars -> ([LLStmt], CurrReg, Vars)
-stmtTollstmts (SAss ident expr) currReg vars = do
-  (newllstmts, newCurrReg, val) <- exprTollstmts expr currReg vars
-  return (newllstmts, newCurrReg, setVar ident val)
+stmtTollstmts (SAss (Ident ident) expr) currReg vars = do
+  let (llstmts1, currReg1, reg1) = exprTollstmts expr currReg vars
+  let (llstmts2, currReg2, vars2) = setVar ident reg1 llstmts1 currReg1 vars
+  (llstmts2, currReg2, vars2)
 stmtTollstmts (SExp expr) currReg vars = do
-  (newllstmts, newCurrReg, val) <- exprTollstmts expr currReg vars
-  return (newllstmts ++ [Print val], newCurrReg, vars)
+  let (llstmts1, currReg1, reg1) = exprTollstmts expr currReg vars
+  (llstmts1 ++ [Print reg1], currReg1, vars)
 
 programToLLStmts :: Program -> [LLStmt] -> CurrReg -> Vars -> [LLStmt]
-programToLLStmts (Prog []) llstmts _ _ = do
+programToLLStmts (Prog []) llstmts _ _ = 
   llstmts
 programToLLStmts (Prog (stmt:stmts)) llstmts currReg vars = do
-  (newllstmts, newCurrReg, newVars) <- stmtTollstmt stmt currReg vars
+  let (newllstmts, newCurrReg, newVars) = stmtTollstmts stmt currReg vars
   programToLLStmts (Prog stmts) (llstmts ++ newllstmts) newCurrReg newVars
 
 -- writing all llstmts to LLVM language in main function --
@@ -79,7 +83,7 @@ llStmtsToOutput = show
 -- main compile function --
 compileProgram :: Program -> String
 compileProgram program = do
-  llstmts <- programToLLStmts program [] (CurrReg 0) (Vars Map.empty)
+  let llstmts = programToLLStmts program [] (CurrReg 0) (Vars Map.empty)
   llStmtsToOutput llstmts
 
 
