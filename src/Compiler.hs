@@ -1,6 +1,5 @@
 module Compiler (compile) where
 
-
 import ParInstant ( pProgram, myLexer )
 import AbsInstant ( Program )
 import CompileJVM ( compileProgram )
@@ -11,19 +10,15 @@ import Data.Map.Lazy as LazyMap ()
 import System.Exit ( exitFailure, exitSuccess )
 import System.IO (hPutStrLn, stderr)
 
-
 usage :: String
 usage = "cabal run compiler -- examples/test02.ins llvm"
   
-
-
 chooseCompilerType :: Program -> String -> String
 chooseCompilerType program compilationType = do
   case compilationType of 
     "jvm" -> CompileJVM.compileProgram program
     "llvm" -> CompileLLVM.compileProgram program
     _ -> usage
-
 
 compile :: IO ()
 compile = do
@@ -39,7 +34,7 @@ compile = do
           exitFailure
         Right parseTree -> do
           print parseTree
-          print "\n"
+          print ""
           print $ chooseCompilerType parseTree compilationType
 
             
