@@ -2,18 +2,16 @@ module CompileJVM where
 
 import AbsInstant
 
-import Data.Map as Map
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Maybe
+import Data.Map as Map
 
--- ! skorzystać z map size i unionWith
+newtype Val = Val Integer deriving Show
+newtype Reg = Reg Integer deriving Show
 
-newtype Val = Val Integer
-newtype Reg = Reg Integer
-
-data Op = Add | Sub | Mul | Div
+data Op = Add | Sub | Mul | Div deriving Show
 
 data JVMStmt = Store Reg 
              | Load Reg
@@ -25,50 +23,61 @@ data JVMStmt = Store Reg
 
 data JVMStmts = JVMStmts { stackCount :: Integer,
                            stmts :: [JVMStmt],
-                           vars :: (Map.Map String Reg)
+                           vars :: Map.Map String Reg
                          } deriving Show
---data JVMVars = Vars (Map.Map String Reg) deriving Show
 
-setVar :: String -> Reg -> JVMStmts -> JVMStmts 
-setVar ident reg jvmStmts = do
-  -- todo uproscic to 
-  if Map.notMember ident jvmStmts.JVMVars then
-    JVMStmts { stackCount = jvmStmts.stackCount, 
-               stmts = jvmStmts.stmts ++ [Store reg],
-               vars = Map.insert ident reg jvmStmts.vars }
-  else
-    JVMStmts { stackCount = jvmStmts.stackCount, 
-               stmts = jvmStmts.stmts ++ [Store reg],
-               vars = jvmStmts.vars }
+
+-- insert element to map and add Store to consume top of the stack into register --
+setVar :: String -> JVMStmts -> JVMStmts 
+setVar ident jvmStmts = do
+  if Map.notMember ident (vars jvmStmts) then do
+    let nextReg = Reg $ (toInteger $ Map.size $ vars jvmStmts) + 1
+    JVMStmts { stackCount = stackCount jvmStmts, 
+               stmts = stmts jvmStmts ++ [Store nextReg],
+               vars = Map.insert ident nextReg (vars jvmStmts) }
+  else do
+    let currReg = getVarReg ident jvmStmts
+    JVMStmts { stackCount = stackCount jvmStmts, 
+               stmts = stmts jvmStmts ++ [Store currReg],
+               vars = vars jvmStmts }
     
-
 getVarReg :: String -> JVMStmts -> Reg
 getVarReg ident jvmStmts =
-  case Map.lookup ident jvmStmts.JVMVars of
+  case Map.lookup ident (vars jvmStmts) of
     Nothing -> Reg $ -1
     Just reg -> reg
 
+printVal :: JVMStmts -> JVMStmts
+printVal jvmStmts =
+  JVMStmts { stackCount = stackCount jvmStmts,
+             stmts = stmts jvmStmts ++ [Print],
+             vars = vars jvmStmts
+           }
+
 exprToJVMStmts :: Exp -> JVMStmts -> JVMStmts
-exprToJVMStmts exp jvmStmts = do
-  -- todo
+exprToJVMStmts expr jvmStmts = 
+  jvmStmts -- todo usunac to 
+  -- todo skompilować przed pisaniem tej funkcji
 
 stmtToJVMStmts :: Stmt -> JVMStmts -> JVMStmts 
 stmtToJVMStmts (SAss (Ident ident) expr) jvmStmts = do
-  let jvmStmts1 = exprToJVMStmts epxr jvmStmts 
-  let reg = getVarReg ident jvmStmts.JVMVars
-  JVMStmts {}
+  let jvmStmts1 = exprToJVMStmts expr jvmStmts 
+  setVar ident jvmStmts1
+stmtToJvmStmts (SExp expr) jvmStmts = do
+  let jvmStmts1 = exprToJVMStmts expr jvmStmts 
+  printVal jvmStmts1
 
 programToJVMStmts :: Program -> JVMStmts -> JVMStmts
-programToJVMStmts (Prog []) jvmStmts _ _ = jvmStmts
-programToJVMStmts (Prog (stmt:stmts)) jvmStmts jvmStmts jvmvars = do
-  -- todo
+programToJVMStmts (Prog []) jvmStmts = jvmStmts
+programToJVMStmts (Prog (stmt:stmts)) jvmStmts = do
+  stmtToJVMStmts stmt jvmStmts
 
 -- writing all jvmStmts to JVM language in main function --
-jvmStmtsToOutput :: [JVMStmt] -> [String]
-jvmStmtsToOutput jvmStmts = show jvmStmts --todo
+jvmStmtsToOutput :: JVMStmts -> String
+jvmStmtsToOutput jvmStmts = show jvmStmts -- todo
 
 -- main compilation function --
 compileProgram :: Program -> String
-compileProgram program = 
-  let jvmStmts = programToJVMStmts program
-  unlines $ jvmStmtsToOutput jvmStmts
+compileProgram program = do
+  let jvmStmts = programToJVMStmts program JVMStmts { stackCount = 0, stmts = [], vars = Map.empty }
+  jvmStmtsToOutput jvmStmts
