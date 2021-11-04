@@ -1,11 +1,8 @@
 #!/bin/bash
-#./dist-newstyle/compiler examples/test06.ins jvm > playground/compiler.j
-
 DIRNAME=`dirname $1`
 BASENAME=`basename $1 .ins`
 JASMIN="$DIRNAME/${BASENAME}.j"
 echo $JASMIN
-
 ./dist-newstyle/compiler "$1" jvm > $JASMIN
 var=".class public ${BASENAME}"
 sed -i "1s/.*/$var/" $JASMIN
