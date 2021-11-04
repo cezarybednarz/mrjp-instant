@@ -9,7 +9,6 @@
 .method public static main([Ljava/lang/String;)V
 .limit stack 4
 .limit locals 15
-  getstatic java/lang/System/out Ljava/io/PrintStream;
   iconst_0
   istore 1
   iconst_1
@@ -26,6 +25,7 @@
   istore 7
   iconst_1
   istore 8
+  getstatic java/lang/System/out Ljava/io/PrintStream;
   iload 3
   iload 4
   imul
@@ -70,37 +70,38 @@
   istore 13
   iconst_2
   istore 14
-  iconst_1
+  getstatic java/lang/System/out Ljava/io/PrintStream;
+  iload 10
   iconst_2
   idiv
-  iconst_1
-  iconst_1
+  iload 13
+  iload 14
   iadd
-  iconst_1
+  iload 12
   iadd
-  iconst_1
+  iload 11
   iadd
   iadd
-  iconst_1
+  iload 9
   iadd
-  iconst_1
+  iload 8
   iadd
+  iload 7
+  iadd
+  iload 6
+  iadd
+  iload 5
+  iadd
+  iload 4
+  iadd
+  iload 3
+  iadd
+  iload 2
+  iconst_2
+  idiv
+  iadd
+  iconst_2
   iload 1
-  iadd
-  iconst_1
-  iadd
-  iconst_1
-  iadd
-  iconst_1
-  iadd
-  iconst_1
-  iadd
-  iconst_1
-  iconst_2
-  idiv
-  iadd
-  iconst_2
-  iconst_1
   imul
   iadd
   bipush 10

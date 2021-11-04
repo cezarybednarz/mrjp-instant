@@ -1,5 +1,5 @@
 #!/bin/bash
-./dist-newstyle/compiler examples/test-moj.ins jvm > playground/compiler.j
+./dist-newstyle/compiler examples/test06.ins jvm > playground/compiler.j
 
 cd playground
 java -jar ../lib/jasmin.jar compiler.j

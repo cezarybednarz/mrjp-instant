@@ -11,9 +11,10 @@ import Data.Map as Map
 newtype Val = Val Integer deriving Show
 newtype Reg = Reg Integer deriving Show
 
-data Op = Add | Sub | Mul | Div 
+data Op = Add | Sub | Mul | Div
 
-data JVMStmt = Store Reg
+data JVMStmt = GetStatic
+             | Store Reg
              | Load Reg
              | Const Val
              | Print
@@ -27,9 +28,9 @@ data JVMStmts = JVMStmts { stackCount :: Integer,
                          } deriving Show
 
 instance Show Op where
-  show op = case op of 
+  show op = case op of
     Add -> "iadd"
-    Sub -> "isub" 
+    Sub -> "isub"
     Mul -> "imul"
     Div -> "idiv"
 
@@ -37,6 +38,12 @@ addJVMStmt :: JVMStmt -> JVMStmts -> JVMStmts
 addJVMStmt jvmStmt jvmStmts =
   JVMStmts { stackCount = stackCount jvmStmts,
              stmts = stmts jvmStmts ++ [jvmStmt],
+             vars = vars jvmStmts }
+
+prependJVMStmt :: JVMStmt -> JVMStmts -> JVMStmts
+prependJVMStmt jvmStmt jvmStmts =
+  JVMStmts { stackCount = stackCount jvmStmts,
+             stmts = jvmStmt : stmts jvmStmts,
              vars = vars jvmStmts }
 
 -- insert element to map and add Store to consume top of the stack into register --
@@ -127,7 +134,7 @@ stmtToJVMStmts (SAss (Ident ident) expr) jvmStmts = do
   setVar ident jvmStmts1
 stmtToJVMStmts (SExp expr) jvmStmts = do
   let jvmStmts1 = exprToJVMStmts expr jvmStmts
-  printVal jvmStmts1
+  printVal (prependJVMStmt GetStatic jvmStmts1)
 
 programToJVMStmts :: Program -> JVMStmts -> JVMStmts
 programToJVMStmts (Prog []) jvmStmts = jvmStmts
@@ -137,21 +144,22 @@ programToJVMStmts (Prog (stmt:stmts)) jvmStmts = do
 
 -- writing all jvmStmts to JVM language in main function --
 optimiseConst :: Integer -> String
-optimiseConst val  
-  | 0 <= val && val <= 5 = 
+optimiseConst val
+  | 0 <= val && val <= 5 =
   "iconst_" ++ show val
   | val == -1 =
   "iconst_m1"
-  | -128 <= val && val <= 127 = 
+  | -128 <= val && val <= 127 =
   "bipush " ++ show val
-  | otherwise = 
+  | otherwise =
   "ldc " ++ show val
 
 
-outputBody :: [JVMStmt] -> [String] -> [String] 
+outputBody :: [JVMStmt] -> [String] -> [String]
 outputBody [] lines = lines
 outputBody (jstmt:jstmts) lines = do
-  let newLine = "  " ++ case jstmt of 
+  let newLine = "  " ++ case jstmt of
+          GetStatic -> "getstatic java/lang/System/out Ljava/io/PrintStream;"
           (Store (Reg reg)) -> "istore " ++ show reg
           (Load (Reg reg)) -> "iload " ++ show reg
           (Const (Val val)) -> optimiseConst val
@@ -175,9 +183,8 @@ jvmStmtsToOutput jvmStmts = do
     "",
     ".method public static main([Ljava/lang/String;)V",
     ".limit stack " ++ show limitStack,
-    ".limit locals " ++ show limitLocals,
-    "  getstatic java/lang/System/out Ljava/io/PrintStream;"
-    ] 
+    ".limit locals " ++ show limitLocals
+    ]
   ++
   outputBody (stmts jvmStmts) []
   ++
