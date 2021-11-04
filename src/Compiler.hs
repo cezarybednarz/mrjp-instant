@@ -33,8 +33,8 @@ compile = do
           hPutStrLn stderr errMessage
           exitFailure
         Right parseTree -> do
-          print parseTree
-          print ""
+          -- print parseTree
+          -- print ""
           putStr $ chooseCompilerType parseTree compilationType
 
             
