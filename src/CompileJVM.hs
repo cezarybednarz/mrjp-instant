@@ -70,9 +70,18 @@ combineJVMStmts :: JVMStmts -> JVMStmts -> JVMStmts
 combineJVMStmts jvmStmts1 jvmStmts2 = do
   JVMStmts { stackCount = max (stackCount jvmStmts1) (stackCount jvmStmts2),
              stmts = stmts jvmStmts1 ++ stmts jvmStmts2,
-             vars = vars jvmStmts1
+             vars = vars jvmStmts2
            }
 
+commutative :: Op -> Bool
+commutative op =
+  case op of 
+    Add -> True
+    Mul -> True
+    Div -> False 
+    Sub -> False
+
+-- doesnt append to existing statements
 arithmExprToJVMStmts :: Op -> Exp -> Exp -> JVMStmts -> JVMStmts
 arithmExprToJVMStmts op expr1 expr2 jvmStmts = do
   let jvmStmts1 = exprToJVMStmts expr1 jvmStmts
@@ -81,32 +90,44 @@ arithmExprToJVMStmts op expr1 expr2 jvmStmts = do
        if stackCount jvmStmts1 >= stackCount jvmStmts2 then
          combineJVMStmts jvmStmts1 (addStackCount jvmStmts2)
        else 
-         addJVMStmt Swap (combineJVMStmts jvmStmts2 (addStackCount jvmStmts1))
+         if commutative op then
+           combineJVMStmts jvmStmts2 (addStackCount jvmStmts1)
+         else 
+           addJVMStmt Swap (combineJVMStmts jvmStmts2 (addStackCount jvmStmts1))
   let jvmStmts4 = addJVMStmt (Arithm op) jvmStmts3
-  combineJVMStmts jvmStmts jvmStmts4
-    
+  jvmStmts4
+
+-- doesnt append to existing statements  
 exprToJVMStmts :: Exp -> JVMStmts -> JVMStmts
 exprToJVMStmts (ExpLit val) jvmStmts = 
-  addJVMStmt (Const (Val val)) jvmStmts
+  JVMStmts { stackCount = 1,
+             stmts = [Const (Val val)],
+             vars = vars jvmStmts 
+           }
 exprToJVMStmts (ExpVar (Ident ident)) jvmStmts = 
-  addJVMStmt (Load $ getVarReg ident jvmStmts) jvmStmts
+  JVMStmts { stackCount = 1,
+             stmts = [Load $ getVarReg ident jvmStmts],
+             vars = vars jvmStmts 
+           }
 exprToJVMStmts (ExpAdd x y) jvmStmts = arithmExprToJVMStmts Add x y jvmStmts
 exprToJVMStmts (ExpSub x y) jvmStmts = arithmExprToJVMStmts Sub x y jvmStmts
 exprToJVMStmts (ExpMul x y) jvmStmts = arithmExprToJVMStmts Mul x y jvmStmts
 exprToJVMStmts (ExpDiv x y) jvmStmts = arithmExprToJVMStmts Div x y jvmStmts
 
+-- 
 stmtToJVMStmts :: Stmt -> JVMStmts -> JVMStmts 
 stmtToJVMStmts (SAss (Ident ident) expr) jvmStmts = do
   let jvmStmts1 = exprToJVMStmts expr jvmStmts 
   setVar ident jvmStmts1
-stmtToJvmStmts (SExp expr) jvmStmts = do
+stmtToJVMStmts (SExp expr) jvmStmts = do
   let jvmStmts1 = exprToJVMStmts expr jvmStmts 
   printVal jvmStmts1
 
 programToJVMStmts :: Program -> JVMStmts -> JVMStmts
 programToJVMStmts (Prog []) jvmStmts = jvmStmts
 programToJVMStmts (Prog (stmt:stmts)) jvmStmts = do
-  stmtToJVMStmts stmt jvmStmts
+  let jvmStmts1 = stmtToJVMStmts stmt jvmStmts
+  combineJVMStmts jvmStmts (programToJVMStmts (Prog stmts) jvmStmts1)
 
 -- writing all jvmStmts to JVM language in main function --
 jvmStmtsToOutput :: JVMStmts -> String
