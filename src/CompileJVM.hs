@@ -28,10 +28,10 @@ data JVMStmts = JVMStmts { stackCount :: Integer,
 
 instance Show Op where
   show op = case op of 
-    Add -> "add"
-    Sub -> "sub" 
-    Mul -> "mul"
-    Div -> "sdiv"
+    Add -> "iadd"
+    Sub -> "isub" 
+    Mul -> "imul"
+    Div -> "idiv"
 
 addJVMStmt :: JVMStmt -> JVMStmts -> JVMStmts
 addJVMStmt jvmStmt jvmStmts =
@@ -136,13 +136,25 @@ programToJVMStmts (Prog (stmt:stmts)) jvmStmts = do
   combineJVMStmts jvmStmts (programToJVMStmts (Prog stmts) jvmStmts1)
 
 -- writing all jvmStmts to JVM language in main function --
+optimiseConst :: Integer -> String
+optimiseConst val  
+  | 0 <= val && val <= 5 = 
+  "iconst_" ++ show val
+  | val == -1 =
+  "iconst_m1"
+  | -128 <= val && val <= 127 = 
+  "bipush " ++ show val
+  | otherwise = 
+  "ldc " ++ show val
+
+
 outputBody :: [JVMStmt] -> [String] -> [String] 
 outputBody [] lines = lines
 outputBody (jstmt:jstmts) lines = do
-  let newLine = " " ++ case jstmt of 
-          (Store (Reg reg)) -> "store " ++ show reg
-          (Load (Reg reg)) -> "load " ++ show reg
-          (Const (Val val)) -> "const " ++ show val
+  let newLine = "  " ++ case jstmt of 
+          (Store (Reg reg)) -> "istore " ++ show reg
+          (Load (Reg reg)) -> "iload " ++ show reg
+          (Const (Val val)) -> optimiseConst val
           Print -> "invokevirtual  java/io/PrintStream/println(I)V"
           Swap -> "swap"
           (Arithm op) -> show op
@@ -150,27 +162,29 @@ outputBody (jstmt:jstmts) lines = do
 
 jvmStmtsToOutput :: JVMStmts -> [String]
 jvmStmtsToOutput jvmStmts = do
-  let limitStack = stackCount jvmStmts
-  let limitLocals = Map.size $ vars jvmStmts
+  let limitStack = (stackCount jvmStmts) + 1
+  let limitLocals = (Map.size $ vars jvmStmts) + 1
   [
-    ".class public Hello",
+    ".class public Compiler",
     ".super java/lang/Object",
     ".method public <init>()V",
-    " aload_0",
-    " invokespecial java/lang/Object/<init>()V",
-    " return",
+    "  aload_0",
+    "  invokespecial java/lang/Object/<init>()V",
+    "  return",
     ".end method",
+    "",
     ".method public static main([Ljava/lang/String;)V",
     ".limit stack " ++ show limitStack,
-    ".limit locals " ++ show limitLocals ] 
+    ".limit locals " ++ show limitLocals,
+    "  getstatic java/lang/System/out Ljava/io/PrintStream;"
+    ] 
   ++
   outputBody (stmts jvmStmts) []
   ++
   [
-    " return",
+    "  return",
     ".end method"
   ]
-  
 
 -- main compilation function --
 compileProgram :: Program -> String
