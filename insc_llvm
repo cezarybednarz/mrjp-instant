@@ -8,7 +8,3 @@ LLVMBC="$DIRNAME/${BASENAME}.bc"
 ./dist-newstyle/compiler "$1" llvm > $LLVM
 llvm-as $LLVM
 llvm-link -o $LLVMBC $LLVMBC lib/runtime.bc
-
-
-
-
