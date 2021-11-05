@@ -1,20 +1,25 @@
-% MRJP - Zadanie 1
+% MRJP - Assignment 1
 % Marcin Benke
 % 2021-09-30
 
 Zadanie 1
 =========
 
-Program w języku Instant składa się z ciągu instrukcji rozdzielonych średnikami.
+A program in the Instant language consists of a sequence of statements
+separated by semicolons.
 
-Instrukcje są dwojakiego rodzaju:
+There are two kinds of statements:
 
-* wyrażenie - wypisuje obliczoną wartość wyrażenia na standardowe wyjście
-* przypisanie postaci `zmienna = wyrażenie` - przypisuje wartość wyrażenia na zmienną po lewej stronie; nic nie wypisuje
 
-Wyrażenia składają się z literałów całkowitych nieujemnych, zmiennych i operacji arytmetycznych. Kolejność obliczenia argumentów operatora nie jest określona (można sobie wybrać wygodniejszą).
+* expression - prints its value on stdout,
+* assignment of the form `variable = expression` - assigns value of
+  the expression to he variable in the LHS; doe snot print anything.
 
-Składnia w formacie BNFC
+Expressions are built from integer literals, variables and arithmetic
+operators. Evaluation order within an expression is not predefined
+(you can choose whatever order suits you best)
+
+BNFC syntax:
 
 ~~~
 Prog. Program ::= [Stmt] ;
@@ -31,76 +36,84 @@ ExpVar.            Exp4   ::= Ident ;
 coercions Exp 4;
 ~~~
 
-**Uwaga:**
+**Note:**
 
-* dodawanie wiąże **w prawo**
-* przyjmujemy, że dodawanie i mnożenie są przemienne, ale nie są łączne.
+* addition binds **to the right**
+* addition and multiplication are commutative but not associative
 
-Zadanie polega na napisaniu kompilatora dla języka Instant do JVM i LLVM.
+Your task is to write a compiler from Instant to JVM and LLVM.
 
-W tym zadaniu wygenerowany kod powinien wykonywać wszystkie wyspecyfikowane
-operacje. Nie jest zatem na przykład dozwolone zastapienie wyrazenia 2+3 przez
-stałą 5, pominiecie przypisań na nieużywane zmienne itp. Usprawnianiem generowanego kodu zajmiemy się w kolejnych zadaniach.
+In this assignment, the generated code should execute all the operations specified in the
+input program. Hence it is not allowed to replace the expression `2+3`
+by constant 5, omitting assignments to unused variables, etc.
+Improving generated code will be a subject of later assignments.
 
-Jedynym dozwolonym, a nawet pożądanym usprawnieniem jest wybór takiej kolejności obliczania  podwyrażeń aby zminimalizować potrzebny rozmiar stosu JVM. W każdym wypadku potrzebny rozmiar stosu musi być obliczony i zadeklarowany (za podejścia typu "`limit stack 1000`" obcinamy punkty). Podobnie należy obliczyć i zadeklarować liczbę wykorzystywanych zmiennych lokalnych.
+The only allowed, indeed desirable improvement is choosing an
+evaluation order so as to minimize the needed JVM stack size. In any
+case needed stack size must be computed and declared. (`clever`
+solutions like `.limit stack 1000` will not be appreciated). Similarly
+you should compute and declare the number of needed locals.
 
-Wymagania techniczne
+Technical requirements
 ------------
 
-1. Projekt powinien być oddany w postaci spakowanego archiwum TAR (.tar.gz lub .tgz)
-2. W korzeniu projektu (tj. w katalogu, w którym zostało rozpakowane archiwum) muszą się znajdować co najmniej:
-    * Plik tekstowy README opisujący szczegóły kompilacji i uruchamiania programu, używane narzędzia i biblioteki, strukturę katalogów projektu, ewentualnie odnośniki do bardziej szczegółowej dokumentacji.
-    * Plik Makefile pozwalający na zbudowanie programu.
-    * katalog src zawierający wyłącznie pliki źródłowe projektu (plus ewentualnie dostarczony przez nas plik Instant.cf); pliki pomocnicze takie jak biblioteki itp powinny być umieszczone w inych katalogach.
-3. Program musi się kompilować na students poleceniem make (które oczywiście może wywoływać inne programy).
-4. Wszelkie używane biblioteki (poza biblioteką standardową używanego jezyka programowania) muszą być opisane w README
-5. Po zbudowaniu kompilatora, w korzeniu muszą się znajdować pliki
-wykonywalne o nazwie `insc_jvm`  oraz `insc_llvm`
+1. Your solution should be submitted as a packed tar achive (.tar.gz
+   or .tgz)
+2. The **root** directory of this archive should contain at least
+    * A text file README describing how to compile and run the
+      program, used libraries and tools, project directory structure,
+      possibly references to more detaild documentation.
+    * A Makefile to build the project
+    * src directory containing only source files of your solution (and
+      possibly the Instant.cf supplied by us); auxiliary files should
+      be placed in other directories.
+3. All used libraries (apart from the standard library of the
+programming language used) must be described in README
+4. Your submission must compile on students by running `make`
+5. After the build, the root of the project must contain executable files
+`insc_jvm`  and `insc_llvm`
+6. Executing `insc_jvm foo/bar/baz.ins` for a correct program
+   `baz.ins` should create files `baz.j` (Jasmin) and `baz.class`
+   (JVM) in the directory `foo/bar` (running Jasmin with `-d`
+   may be helpful here). Needed runtime library methods should be placed in
+   `Runtime.class` in the lib subdirectory.
 
-6. Wykonanie `insc_jvm foo/bar/baz.ins` dla poprawnego programu wejściowego `baz.ins` ma stworzyć pliki `baz.j` (kod Jasmin) oraz `baz.class` w katalogu `foo/bar` (przydatna może być opcja `-d` dla Jasmina).
-Wykorzystywany jasmin.jar należy umieścić w katalogu lib
-Ewentualne metody biblioteczne (`printInt` etc.) należy umieścić w klasie `Runtime.class` w katalogu lib
+Executing `insc_llvm foo/bar/baz.ins` for a correct program `baz.ins`
+should create files `baz.ll` (text LLVM) and `baz.bc` (lli-exectutable
+bitcode)  in the directory `foo/bar`.
 
-    Wykonanie `insc_llvm foo/bar/baz.ins` dla poprawnego programu
-    wejściowego `baz.ins` ma stworzyć pliki `baz.ll` (tekstowy kod LLVM) oraz
-    `baz.bc` (bitkod LLVM wykonywalny przy uzyciu `lli`) w katalogu `foo/bar`
 
-Punktacja:
+Grading
 ---------
 
-Za to zadanie można uzyskać maksymalnie 6p. W przybliżeniu
+For this assignment you may get at most 6 points. Approximately
 
 * LLVM 2p
 * JVM 3p
-* Dla JVM: optymalizacja kolejności obliczania podwyrażeń, eliminacja zbędnych swap, wybór instrukcji: 1p.
+* For JVM: optimizing order of evaluation for JVM 1p, redundant swap elimination, instruction choice - 1p
 
-Uwagi:
------
-
-1. Kompilatory powinny działać w czasie nie gorszym niż O(n*log n) zwn rozmiar wejścia.
-2. Dla JVM: będą odejmowane punkty za brak użycia specjalnych
-instrukcji dla małych stałych (iload_, icons_, bipush itp.).
-3. Dla LLVM: można używać alloca, ale nie więcej niż jedno alloca na
-jedną zmienną.
-
-Spóźnienia
+Late submissions
 ----------
 
-Programy oddane po terminie będą obciążane karą 1p za każdy (rozpoczęty) tydzień opóźnienia. Ostatecznym terminem, po którym programy nie będą przyjmowane ("termin poprawkowy") jest 5 grudnia.
+Solutions submitted late will be penalised with 1p for every delay
+week started. The final date after which no solutions will be accepted
+is Dec 5.
 
-Zasady
+Rules
 ------
-Projekt zaliczeniowy ma być pisany samodzielnie. Wszelkie przejawy niesamodzielności będą karane. W szczególności:
 
-* nie wolno oglądać kodu innych studentów, pokazywać, ani w jakikolwiek sposób udostępniać swojego kodu
-* wszelkie zapożyczenia powinny być opisane z podaniem źródła.
+The  assignment must be completed on your own. In particular:
 
-Programy przykładowe
+* it is not allowed to look at other students' code, or make your code
+  available in any way to other students
+* all code that is not your own must be clearly marked with a source attribution
+
+Example programs
 ----------
 
-Paczka [instant210930.tgz](instant210930.tgz) zawiera programy
-przykładowe i ich oczekiwane wyjście, oraz plik Instant.cf z gramatyką
-w formacie BNFC.
+The archive [instant210930.tgz](instant210930.tgz) contains example
+programs with their expected output, as well as `Instant.cf`
+containing the BNFC grammar of Instant.
 
 ----
 &copy; 2021 Marcin Benke

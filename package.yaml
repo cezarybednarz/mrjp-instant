@@ -31,10 +31,3 @@ executables:
     source-dirs:         src
     dependencies:
     - mrjp-instant
-
-# tests:
-#   compiler-test:
-#     main:                Spec.hs
-#     source-dirs:         test
-#     dependencies:
-#     - wiadrex-lang
